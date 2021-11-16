@@ -3,25 +3,11 @@
 
 require_relative '4.rb'
 
-# memory:
+# memory layout:
 # 00-19     constants
 # 20-59     variables
 # 60-69     if-temps
 # 90-99     functional spaces
-
-# TODO: optimize constants
-
-class String
-    def num_pred
-        # (self.to_i - 1).to_s.rjust(2, ?0)
-    end
-    
-    def num_pred!
-        pred = num_pred
-        self.clear
-        self << pred
-    end
-end
 
 class Macro
     attr_reader :name, :params, :lines
@@ -92,7 +78,6 @@ class Four
     
     # assigns the value in `str` to reference
     def gen_number(reference, str)
-        # p [reference, str]
         res = ""
         case str
             when /^'(.)'$/
@@ -100,13 +85,11 @@ class Four
             when /^'(\\.)'$/
                 res = gen_number(reference, eval("\"#$1\"").ord.to_s)
             when /^\d{1,2}$/
-                # p [reference, str, str.rjust(2, ?0)]
                 res += "6" + reference + str.rjust(2, ?0)
             when /^\d{3,}$/
                 repetend, num = str.to_i.divmod 99
                 res += "6" + reference + num.to_s.rjust(2, ?0)
                 repetend.times {
-                    # p "99 is #{get_value("99")}"
                     res += "0" + reference * 2 + get_value("99")
                 }
             when /^#{@@identifier}$/
@@ -130,14 +113,11 @@ class Four
     end
     
     def get_value(str, defnum=true)
-        # p [str, defnum]
         case str
             when /^\d+$/
                 int_val = str.to_i
                 index = @constants.index int_val
-                # p [str, !index.nil?]
                 unless index.nil?
-                    # p "cache hit: #{str}"
                     index.to_s.rjust(2, ?0)
                 else
                     if @cur_num >= "20"
@@ -149,7 +129,6 @@ class Four
                     @cur_num.next!
                     @constants << int_val
                     precompile gen_number ident, str
-                    # p @constants
                     ident
                 end
             when /^'(.)'$/
@@ -210,7 +189,6 @@ class Four
     
     def comp_mod(target, a, b)
         if target == a
-            # p 'temp needed'
             # we need a temporary
             orig = @cur_fnc.dup
             
@@ -224,24 +202,10 @@ class Four
             # restore temporary
             @cur_fnc = orig
         else
-            # p [target, a, b]
             comp_divide target, a, b
             comp_multiply target, target, b
             comp_subtract target, a, target
         end
-    end
-    
-    def comp_exit
-        compile "4"
-    end
-    
-    def comp_input(target)
-        compile "7" + target
-    end
-    
-    def comp_loop(target)
-        compile "8" + target
-        @end_types.push lambda { "" }
     end
     
     def comp_if(target)
@@ -255,43 +219,55 @@ class Four
         }
     end
     
-    def comp_loop_end
-        compile @end_types.pop[]
-        compile "9"
-    end
-    
-    def comp_set(source, dest)
-        compile "6" + source + dest
-    end
-    
-    def comp_print(source)
-        compile "5" + source
-    end
-    
     def comp_add(target, a, b)
         compile "0" + target + a + b
-    end
-    
-    def comp_divide(target, a, b)
-        compile "3" + target + a + b
-    end
-    
-    def comp_multiply(target, a, b)
-        compile "2" + target + a + b
     end
     
     def comp_subtract(target, a, b)
         compile "1" + target + a + b
     end
     
-    # NOTE: grossly uncompressed.
+    def comp_multiply(target, a, b)
+        compile "2" + target + a + b
+    end
+    
+    def comp_divide(target, a, b)
+        compile "3" + target + a + b
+    end
+    
+    def comp_exit
+        compile "4"
+    end
+    
+    def comp_print(source)
+        compile "5" + source
+    end
+    
+    def comp_set(source, dest)
+        compile "6" + source + dest
+    end
+    
+    def comp_input(target)
+        compile "7" + target
+    end
+    
+    def comp_loop(target)
+        compile "8" + target
+        @end_types.push lambda { "" }
+    end
+    
+    def comp_loop_end
+        compile @end_types.pop[]
+        compile "9"
+    end
+    
+    # NOTE: grossly uncompressed. use only for debugging purposes if you
+    # care about code length
     def comp_write(string)
         orig = @cur_fnc.dup
         
         temp_main = @cur_fnc.dup
         @cur_fnc.next!
-        # temp_aux = @cur_fnc.dup
-        # @cur_fnc.next!
         
         ords = string.chars.map(&:ord)
         
@@ -309,8 +285,6 @@ class Four
     def compile_macro(macro, replacements)
         macro.lines.each { |command, args, line|
             args = macro.replace(args, replacements)
-            # p [command, args, line]
-            # p @variables
             compile_command command, args, line
         }
     end
@@ -420,13 +394,11 @@ class Four
     end
     
     def run
-        mode = :compile
-        # :interpret
+        mode = :compile # or :preprocess
         @lines.each { |line|
             line.gsub!(/((?:'..?'|"(?:.|"")+"|.)*?);.+/, '\1')
             line.strip!
             next if line.empty?
-            # p line
             # preprocess
             
             if /^#(\w+)\s*(.*)/ === line
@@ -446,14 +418,9 @@ class Four
                     macro = @macros[$1]
                     args = $2.gsub(/^\(|\)$/, "").scan(@@param)
                     if mode == :preprocess
-                        # p macro
-                        # p @macro_build
-                        # p args
-                        # puts "````"*3
                         macro.lines.each { |line|
                             @macro_build.add [line[0], macro.replace(line[1], args), line[2]]
                         }
-                        # puts "`"*40
                     else
                         compile_macro macro, args
                         compile " "
@@ -480,11 +447,15 @@ class Four
     end
 end
 
+# TODO: do something better about argument parsing
 prog = Four.translate File.read(ARGV[0])
 
 puts prog if ARGV[1]
 
 dat = 4.(prog)
-# puts
-# puts "-"*30
-# p dat
+
+if ARGV[2]
+    puts
+    puts "-" * 30
+    p dat
+end
