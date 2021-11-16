@@ -1,0 +1,9 @@
+decl foo, bar
+set foo, 99
+set bar, 35
+
+
+;decl temp_a
+;div temp_a, foo, bar
+;mulx temp_a, bar
+;sub temp_a, foo, temp_a

@@ -1,0 +1,21 @@
+decl a, c
+set a, 'H'
+print a
+set a, 'e'
+print a
+set a, 'l'
+print a
+print a
+set a, 'o'
+print a
+set a, ','
+print a
+set a, ' '
+print a
+input c
+loop c
+print c
+input c
+end
+set a, '!'
+print a

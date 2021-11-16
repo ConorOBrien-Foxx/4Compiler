@@ -1,0 +1,50 @@
+decl pt1, pt2
+#define PRINT_NUM(num, base)
+  set pt2, 1
+  ; zero case
+  mulx pt2, base
+  if num
+    divx pt2, base
+  end
+  ; reverse number
+  loop num
+    mod pt1, num, base
+    mulx pt2, base
+    addx pt2, pt1
+    divx num, base
+  end
+  ; we dec/inc to avoid printing that 1 and comparing for it
+  ; main print loop
+  dec pt2
+  loop pt2
+    inc pt2
+    mod pt1, pt2, base
+    mulx num, base
+    addx num, pt1
+    divx pt2, base
+    addx pt1, '0'
+    print pt1
+    dec pt2
+  end
+#enddef
+
+decl TEN
+set TEN, 10
+decl n, fact, i
+set n, 1
+loop n
+  add i, n, 0
+  set fact, 1
+  
+  loop i
+    mulx fact, i
+    dec i
+  end
+  
+  #PRINT_NUM(n, TEN)
+  msg "! = "
+  #PRINT_NUM(fact, TEN)
+  print TEN
+  
+  inc n
+end

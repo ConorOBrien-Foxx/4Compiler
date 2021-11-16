@@ -1,0 +1,16 @@
+#define foo(x)
+  addx x, x
+#enddef
+
+decl man
+set man, 37
+
+#define bar(y)
+  #foo(y)
+  #foo(man)
+  #foo(y)
+#enddef
+
+decl lol
+set lol, 12
+#bar(lol)

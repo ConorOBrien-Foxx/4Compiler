@@ -1,0 +1,217 @@
+; if quartic is turing complete, then 4 is turing complete, since all quartic
+; programs can be converted to 4 programs.
+; quartic must be turing complete, because arbitrary information may be stored
+; in a single number, as they are bignums
+
+; as a proof of concept, we shall interpret Boolfuck in quartic.
+; while an interpreter is perhaps somewhat much, it is fun to do so.
+
+; io loop. we shall store the code as an octal integer:
+;   >   1
+;   <   2
+;   @   3
+;   [   4
+;   ]   5
+;   .   6
+;   ,   7
+; we omit 0 for its ambiguity as a leading character. hence, the program
+; `>@>>>@<<<<.` is 0o13111322226, or 1495639190
+; we shall take input until a newline or unsuitable character
+
+#define CASE(find, replace)
+  cmp chk, i, find
+  if chk
+    set tmp, replace
+  end
+#enddef
+
+decl prog, progsize
+
+decl chk, tmp, i
+input i
+loop i
+  zero tmp
+  #CASE('>', 1)
+  #CASE('<', 2)
+  #CASE('@', 3)
+  #CASE('[', 4)
+  #CASE(']', 5)
+  #CASE('.', 6)
+  #CASE(',', 7)
+  mulx i, tmp ; we want to stop if tmp unset
+  
+  if tmp
+    mulx prog, 8 ; our base
+    addx prog, tmp
+    inc progsize
+  end
+  if i
+    input i
+  end
+end
+
+; prog is now a "string" in the format as described above
+decl tape, ptr, tapemax
+; we can store the tape as a 0b1XX...XXX where XX...XXX are bits in the tape
+; we want the leading one so we can keep track of zeroes in the tape
+; ptr is the index of the current cell in tape, as a power of two
+; while we could convert back and forth between linear indices, it is more
+; efficient to simply consider ptr as a power of two corresponding to the bit
+; we wish to access. hence, ptr starts at 1
+; i is the index of the current character being tested (declared earlier; reused)
+set tape, 1
+set tapemax, 40 ; 5 bytes, 40 bits
+inc tapemax     ; +1 for default padding 1
+set ptr, 1
+
+; initialize tape (uses tmp)
+#define INIT_ARRAY(tape, tapemax, base)
+  add tmp, tapemax, 0
+  loop tmp
+    mulx tape, base
+    dec tmp
+  end
+#enddef
+
+#INIT_ARRAY(tape, tapemax, 2)
+
+; target = tape[index] (by factor)
+#define ARR_AT(target, tape, index, factor)
+  add target, tape, 0
+  divx target, index
+  modx target, factor
+#enddef
+; tape[index] = value (by factor)
+decl tmpset
+#define ARR_SET(tape, index, value, factor)
+  mod tmpset, tape, index
+  divx tape, index
+  divx tape, factor
+  mulx tape, factor ; clear last bit sequence
+  addx tape, value ; set last bit sequence
+  mulx tape, index ; restore positions
+  addx tape, tmpset ; restore last bits
+#enddef
+#define TAPE_AT(target, index)
+  #ARR_AT(target, tape, index, 2)
+#enddef
+#define TAPE_SET(index, value)
+  #ARR_SET(tape, index, value, 2)
+#enddef
+
+; set up the stack:
+decl callstack, csptr
+set callstack, 1
+add csptr, progsize, 0
+#INIT_ARRAY(callstack, progsize, progsize)
+
+; interpret step
+
+; set i to the first character, which is the last index
+set i, 1
+add tmp, progsize, 0
+dec tmp
+loop tmp
+  mulx i, 8
+  dec tmp
+end
+
+#define WHEN(val)
+  cmp chk, tmp, val
+  if chk
+#enddef
+
+decl cur, outc, acc
+loop i
+  #ARR_AT(tmp, prog, i, 8)
+  #TAPE_AT(cur, ptr)
+  #WHEN(1) ; '>'
+    mulx ptr, 2
+  end
+  #WHEN(2) ; '<'
+    divx ptr, 2
+  end
+  #WHEN(3) ; '@'
+    sub cur, 1, cur
+    #TAPE_SET(ptr, cur)
+  end
+  #WHEN(5) ; ']'
+    divx csptr, progsize ; csptr--
+    #ARR_AT(acc, callstack, csptr, progsize)
+    ; reverse the procedure above
+    set i, 1
+    ; dec acc 
+    ; we would normally need to dec acc, but its fine if we compute another
+    ; iteration, as the loop naturally should fix that below
+    loop acc
+      mulx i, 8
+      dec acc
+    end
+  end
+  #WHEN(6) ; '.'
+    ; we can use chk as a temp here
+    add chk, ptr, 0
+    zero acc
+    set outc, 8 ; over the next 8 bits
+    loop outc
+      #TAPE_AT(cur, ptr)
+      mulx acc, 2
+      addx acc, cur
+      mulx ptr, 2
+      dec outc
+    end
+    print acc
+    ; restore ptr
+    add ptr, chk, 0
+  end
+  #WHEN(7) ; ','
+    input acc
+    set outc, 8 ; set ptr 8 bits forward
+    loop outc
+      mulx ptr, 2
+      dec outc
+    end
+    set outc, 8 ; initialize the bits backwards
+    loop outc
+      mod cur, acc, 2
+      divx ptr, 2
+      #TAPE_SET(ptr, cur)
+      divx acc, 2
+      dec outc
+    end
+    ; ptr has been restored naturally
+  end
+  ; needs to be at end because of how it moves the IP
+  #WHEN(4) ; '['
+    if cur
+      ; we're good to continue, push our position to the stack
+      zero acc
+      ; we can use chk as a temp here
+      add chk, i, 0
+      loop chk
+        inc acc
+        divx chk, 8
+      end
+      ; acc now holds an integer from 1 to progsize
+      #ARR_SET(callstack, csptr, acc, progsize)
+      mulx csptr, progsize ; csptr++
+    end
+    sub cur, 1, cur
+    if cur ; else
+      ; we need to find the next matching ] and jump past it
+      ; we will use acc as our depth counter. initially 1
+      set acc, 1
+      loop acc
+        divx i, 8 ; move to next character
+        #ARR_AT(tmp, prog, i, 8)
+        #WHEN(4) ; '['
+          inc acc
+        end
+        #WHEN(5) ; ']'
+          dec acc
+        end
+      end
+    end
+  end
+  divx i, 8 ; move to next character
+end

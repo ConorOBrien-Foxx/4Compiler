@@ -1,0 +1,8 @@
+decl a, b
+input a
+loop a
+  input b
+  print b
+  print a
+  input a
+end

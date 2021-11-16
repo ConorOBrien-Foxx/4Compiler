@@ -1,0 +1,6 @@
+decl a, b
+set a, 9
+set b, 7
+divx a, b
+addx a, '0'
+print a

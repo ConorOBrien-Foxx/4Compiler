@@ -1,0 +1,107 @@
+decl chk, chk2 ; condition variable
+decl ctr ; generic counter
+decl acc
+set acc, 0
+
+decl i  ; input character
+
+input i
+
+; pseudo stack - operators
+decl ssize
+set ssize, 0
+decl s0, s1, s2, s3, s4, s5, s6, s7, s8, s9
+; pseudoo queue - data
+decl qsize
+set qsize, 0
+decl q0, q1, q2, q3, q4, q5, q6, q7, q8, q9
+
+; check if digit vars
+; uses: chk, ctr
+decl cid_zero_ascii, cid_is_digit
+
+set chk2, 1
+loop chk2
+  set chk2, 0
+  set cid_is_digit, 0
+  set cid_zero_ascii, '0'
+  set ctr, 10
+  loop ctr
+    cmp chk, i, cid_zero_ascii
+    if chk
+      set cid_is_digit, 1
+      set ctr, 1
+    end
+    inc cid_zero_ascii
+    dec ctr
+  end
+
+  if cid_is_digit
+    mulx acc, 10
+    addx acc, i
+    subx acc, '0'
+    set chk2, 1
+    input i
+  end
+end
+; ctr should be 0 at this point, so adding is equal to setting
+; push acc to queue
+decl qi
+set qi, 10
+addx ctr, qsize
+
+div chk, ctr, qi
+if chk ; q9 - overflow
+  msg "overflow!"
+end
+dec qi
+if chk ; q8
+  zero q9
+  addx q9, q8
+end
+dec qi
+if chk ; q7
+  zero q8
+  addx q8, q7
+end
+dec qi
+if chk ; q6
+  zero q7
+  addx q7, q6
+end
+dec qi
+if chk ; q5
+  zero q6
+  addx q6, q5
+end
+dec qi
+if chk ; q4
+  zero q5
+  addx q5, q4
+end
+dec qi
+if chk ; q3
+  zero q4
+  addx q4, q3
+end
+dec qi
+if chk ; q2
+  zero q3
+  addx q3, q2
+end
+dec qi
+if chk ; q1
+  zero q2
+  addx q2, q1
+end
+dec qi
+if chk ; q0
+  zero q1
+  addx q1, q0
+end
+zero q0
+addx q0, acc
+print qi
+
+
+; input operator

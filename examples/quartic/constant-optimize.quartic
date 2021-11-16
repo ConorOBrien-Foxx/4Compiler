@@ -1,0 +1,10 @@
+decl a
+addx a, 3
+addx a, 6
+addx a, 7
+addx a, 9
+addx a, 3
+addx a, 5
+addx a, 7
+addx a, 7
+addx a, 'd'

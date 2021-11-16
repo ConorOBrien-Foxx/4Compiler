@@ -1,0 +1,7 @@
+decl cmp
+set cmp, 0
+if cmp
+  ret
+end
+addx cmp, '0'
+print cmp
